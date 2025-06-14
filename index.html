@@ -1,75 +1,71 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Local Essentials - Weather</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #6a11cb, #2575fc);
-      color: white;
-      text-align: center;
-      padding: 2rem;
-    }
-    #status {
-      margin: 20px 0;
-      font-size: 1.2rem;
-    }
-    #coords {
-      margin: 10px 0;
-      font-weight: bold;
-    }
-    #weather {
-      margin-top: 20px;
-      font-size: 1.1rem;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Weather & Location Tracker</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #a18cd1; color: #fff; text-align:center; padding: 2rem; }
+  #weather { margin-top: 20px; }
+</style>
 </head>
 <body>
-  <h1>📍 Local Essentials</h1>
-  <p>We use your location to show live weather and send coordinates for tracking.</p>
-  <div id="status">Waiting for location permission...</div>
-  <div id="coords"></div>
+  <h1>Weather at Your Location</h1>
+  <p id="status">Requesting location permission...</p>
   <div id="weather"></div>
 
   <script>
-    // Fake weather data generator (replace with real API in future)
-    function getFakeWeather(lat, lon) {
-      // Random temp for demo
-      const temp = (20 + Math.random() * 15).toFixed(1);
-      return `Sunny, ${temp} °C`;
+    const statusEl = document.getElementById('status');
+    const weatherEl = document.getElementById('weather');
+
+    // Your weather API details here:
+    const WEATHER_API_KEY = 'YOUR_API_KEY_HERE';  // Replace with your actual key
+    const WEATHER_API_URL = 'https://api.openweathermap.org/data/2.5/weather';
+
+    // Open WebSocket to your server
+    const socket = new WebSocket(`ws://${location.host}`);
+
+    socket.onopen = () => console.log('WebSocket connected');
+    socket.onerror = (err) => console.error('WebSocket error:', err);
+
+    function sendLocation(lat, lon) {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'location', data: { latitude: lat, longitude: lon } }));
+      }
     }
 
-    function saveLocation(lat, lon) {
-      // Read old locations from localStorage or init empty array
-      let locs = JSON.parse(localStorage.getItem('trackedLocations') || '[]');
-      // Add new location with timestamp
-      locs.push({ lat, lon, time: new Date().toISOString() });
-      // Save back
-      localStorage.setItem('trackedLocations', JSON.stringify(locs));
+    function fetchWeather(lat, lon) {
+      const url = `${WEATHER_API_URL}?lat=${lat}&lon=${lon}&appid=${WEATHER_API_KEY}&units=metric`;
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.weather && data.weather.length > 0) {
+            weatherEl.innerHTML = `
+              <p><strong>${data.name}</strong></p>
+              <p>${data.weather[0].description} 🌤️</p>
+              <p>Temperature: ${data.main.temp} °C</p>
+              <p>Humidity: ${data.main.humidity}%</p>
+            `;
+          } else {
+            weatherEl.textContent = 'Could not fetch weather data.';
+          }
+        })
+        .catch(() => {
+          weatherEl.textContent = 'Error fetching weather data.';
+        });
     }
 
-    function success(position) {
-      const lat = position.coords.latitude;
-      const lon = position.coords.longitude;
-
-      document.getElementById('status').textContent = 'Location acquired!';
-      document.getElementById('coords').textContent = `Coordinates: ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
-      document.getElementById('weather').textContent = `Weather: ${getFakeWeather(lat, lon)}`;
-
-      // Save location in localStorage (simulate sending to backend)
-      saveLocation(lat, lon);
-    }
-
-    function error(err) {
-      document.getElementById('status').textContent = '❌ Unable to get location: ' + err.message;
-    }
-
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(success, error);
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(position => {
+        const { latitude, longitude } = position.coords;
+        statusEl.textContent = `Location obtained: (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
+        sendLocation(latitude, longitude);
+        fetchWeather(latitude, longitude);
+      }, () => {
+        statusEl.textContent = 'Location permission denied.';
+      });
     } else {
-      document.getElementById('status').textContent = '❌ Geolocation not supported by your browser';
+      statusEl.textContent = 'Geolocation not supported by your browser.';
     }
   </script>
 </body>
