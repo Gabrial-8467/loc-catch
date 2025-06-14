@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Location Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #111;
+      color: #0f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    h1 { margin-bottom: 20px; }
+    .coords {
+      font-size: 1.2rem;
+      background: #222;
+      padding: 15px 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #0f0;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>📡 Real-Time Coordinates</h1>
+  <div class="coords" id="coords">Waiting for data...</div>
+
+  <script>
+    const ws = new WebSocket("ws://localhost:3000/tracker");
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      const { latitude, longitude, timestamp } = data;
+      document.getElementById("coords").innerHTML = `
+        Latitude: ${latitude}<br/>
+        Longitude: ${longitude}<br/>
+        Timestamp: ${new Date(timestamp).toLocaleString()}
+      `;
+    };
+  </script>
+
+</body>
+</html>
