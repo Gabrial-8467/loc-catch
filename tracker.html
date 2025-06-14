@@ -1,81 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Location Tracker</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #222;
-      color: #eee;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      min-height: 100vh;
-      padding: 20px;
-    }
-    h1 {
-      margin-bottom: 1rem;
-    }
-    #location {
-      font-size: 1.2rem;
-      background: #333;
-      padding: 15px 25px;
-      border-radius: 8px;
-      box-shadow: 0 0 10px #00ffcc;
-      min-width: 300px;
-      text-align: center;
-    }
-    #status {
-      margin-top: 1rem;
-      color: #f77;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Live Location Tracker</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #222;
+    color: #0f0;
+    display: flex; justify-content: center; align-items: flex-start;
+    height: 100vh; margin: 0; padding: 1rem;
+    overflow-y: auto;
+  }
+  #log {
+    background: #000;
+    padding: 1rem;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 500px;
+    font-family: monospace;
+    white-space: pre-wrap;
+  }
+</style>
 </head>
 <body>
 
-  <h1>🚨 Real-Time Location Tracker</h1>
-  <div id="location">Waiting for location data...</div>
-  <div id="status"></div>
+<pre id="log">Waiting for location data...\n</pre>
 
-  <script>
-    const locationDiv = document.getElementById('location');
-    const statusDiv = document.getElementById('status');
+<script>
+  const logEl = document.getElementById('log');
 
-    const ws = new WebSocket('ws://localhost:3000/tracker');
+  const ws = new WebSocket('ws://localhost:3000/ws');
 
-    ws.onopen = () => {
-      statusDiv.textContent = '✅ Connected to tracker server.';
-    };
+  ws.addEventListener('open', () => {
+    logEl.textContent += 'Connected to server.\n';
+  });
 
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        const lat = data.latitude.toFixed(6);
-        const lon = data.longitude.toFixed(6);
-        const time = new Date(data.timestamp).toLocaleTimeString();
+  ws.addEventListener('message', (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      const time = new Date(data.timestamp).toLocaleTimeString();
+      const lat = data.latitude.toFixed(5);
+      const lon = data.longitude.toFixed(5);
+      logEl.textContent += `[${time}] Latitude: ${lat}, Longitude: ${lon}\n`;
+      window.scrollTo(0, document.body.scrollHeight);
+    } catch (err) {
+      console.error('Invalid data:', err);
+    }
+  });
 
-        locationDiv.innerHTML = `
-          <div>Latitude: <strong>${lat}</strong></div>
-          <div>Longitude: <strong>${lon}</strong></div>
-          <div>Last update: <em>${time}</em></div>
-        `;
-      } catch (e) {
-        console.error('Error parsing message', e);
-      }
-    };
+  ws.addEventListener('close', () => {
+    logEl.textContent += 'Disconnected from server.\n';
+  });
 
-    ws.onclose = () => {
-      statusDiv.textContent = '⚠️ Connection closed.';
-    };
-
-    ws.onerror = (err) => {
-      statusDiv.textContent = '⚠️ WebSocket error.';
-      console.error('WebSocket error:', err);
-    };
-  </script>
+  ws.addEventListener('error', (err) => {
+    logEl.textContent += `WebSocket error: ${err.message}\n`;
+  });
+</script>
 
 </body>
 </html>
