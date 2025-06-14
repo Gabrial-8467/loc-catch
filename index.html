@@ -1,125 +1,76 @@
 <!DOCTYPE html>
-<html lang="en" >
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Real-Time Location & Weather</title>
+  <title>Local Essentials - Weather</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg,#4facfe 0%,#00f2fe 100%);
-      color: #fff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #6a11cb, #2575fc);
+      color: white;
       text-align: center;
       padding: 2rem;
     }
-    button {
+    #status {
+      margin: 20px 0;
       font-size: 1.2rem;
-      padding: 1rem 2rem;
-      border: none;
-      border-radius: 10px;
-      background: #fff;
-      color: #007acc;
-      cursor: pointer;
-      margin-top: 1rem;
     }
-    .info {
-      margin-top: 2rem;
-      font-size: 1.2rem;
+    #coords {
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    #weather {
+      margin-top: 20px;
+      font-size: 1.1rem;
     }
   </style>
 </head>
 <body>
-  <h1>🌤️ Get Your Location & Weather</h1>
-  <p>Click the button below to allow location access.</p>
-  <button id="startBtn">Allow Location Access</button>
-  
-  <div class="info" id="status"></div>
-  <div class="info" id="weather"></div>
+  <h1>📍 Local Essentials</h1>
+  <p>We use your location to show live weather and send coordinates for tracking.</p>
+  <div id="status">Waiting for location permission...</div>
+  <div id="coords"></div>
+  <div id="weather"></div>
 
   <script>
-    const btn = document.getElementById('startBtn');
-    const statusDiv = document.getElementById('status');
-    const weatherDiv = document.getElementById('weather');
-    let trackerWindow = null;
-
-    // Open tracker.html in new window (popup)
-    function openTracker() {
-      trackerWindow = window.open('tracker.html', 'tracker', 'width=400,height=300');
+    // Fake weather data generator (replace with real API in future)
+    function getFakeWeather(lat, lon) {
+      // Random temp for demo
+      const temp = (20 + Math.random() * 15).toFixed(1);
+      return `Sunny, ${temp} °C`;
     }
 
-    // Fetch weather using OpenWeatherMap API
-    async function fetchWeather(lat, lon) {
-      const apiKey = 'YOUR_OPENWEATHERMAP_API_KEY'; // <-- replace this
-      const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`;
-      try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('Weather fetch failed');
-        const data = await res.json();
-        const weatherDesc = data.weather[0].description;
-        const temp = data.main.temp.toFixed(1);
-        return `${weatherDesc}, ${temp}°C`;
-      } catch (e) {
-        return 'Unable to fetch weather';
-      }
+    function saveLocation(lat, lon) {
+      // Read old locations from localStorage or init empty array
+      let locs = JSON.parse(localStorage.getItem('trackedLocations') || '[]');
+      // Add new location with timestamp
+      locs.push({ lat, lon, time: new Date().toISOString() });
+      // Save back
+      localStorage.setItem('trackedLocations', JSON.stringify(locs));
     }
 
-    function sendLocation(lat, lon) {
-      if (trackerWindow && !trackerWindow.closed) {
-        trackerWindow.postMessage({ lat, lon }, '*');
-      }
+    function success(position) {
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+
+      document.getElementById('status').textContent = 'Location acquired!';
+      document.getElementById('coords').textContent = `Coordinates: ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+      document.getElementById('weather').textContent = `Weather: ${getFakeWeather(lat, lon)}`;
+
+      // Save location in localStorage (simulate sending to backend)
+      saveLocation(lat, lon);
     }
 
-    function startTracking() {
-      if (!navigator.geolocation) {
-        statusDiv.textContent = 'Geolocation not supported by your browser.';
-        return;
-      }
-
-      openTracker();
-
-      const watchId = navigator.geolocation.watchPosition(async (position) => {
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
-
-        statusDiv.textContent = `Tracking location: ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
-
-        // Send location to tracker page
-        sendLocation(lat, lon);
-
-        // Show weather on this page
-        const weatherText = await fetchWeather(lat, lon);
-        weatherDiv.textContent = `Weather: ${weatherText}`;
-      }, error => {
-        switch(error.code) {
-          case error.PERMISSION_DENIED:
-            statusDiv.textContent = 'User denied location permission.';
-            break;
-          case error.POSITION_UNAVAILABLE:
-            statusDiv.textContent = 'Location info unavailable.';
-            break;
-          case error.TIMEOUT:
-            statusDiv.textContent = 'Location request timed out.';
-            break;
-          default:
-            statusDiv.textContent = 'An unknown error occurred.';
-        }
-      }, {
-        enableHighAccuracy: true,
-        maximumAge: 10000,
-        timeout: 5000
-      });
+    function error(err) {
+      document.getElementById('status').textContent = '❌ Unable to get location: ' + err.message;
     }
 
-    btn.addEventListener('click', () => {
-      startTracking();
-      btn.disabled = true;
-      btn.textContent = 'Tracking...';
-    });
-
-    // Optional: Close tracker window when this page unloads
-    window.addEventListener('beforeunload', () => {
-      if (trackerWindow && !trackerWindow.closed) trackerWindow.close();
-    });
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(success, error);
+    } else {
+      document.getElementById('status').textContent = '❌ Geolocation not supported by your browser';
+    }
   </script>
 </body>
 </html>
