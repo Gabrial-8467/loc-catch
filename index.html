@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Weather & Location Tracker</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #89f7fe, #66a6ff);
+      height: 100vh;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      text-align: center;
+      user-select: none;
+      cursor: pointer;
+    }
+    .container {
+      background: rgba(0,0,0,0.25);
+      padding: 2rem 3rem;
+      border-radius: 15px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      max-width: 400px;
+    }
+    h1 {
+      margin-bottom: 1rem;
+    }
+    p {
+      margin-bottom: 2rem;
+      font-weight: 500;
+    }
+    button {
+      padding: 0.8rem 2rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 30px;
+      background: #fff;
+      color: #66a6ff;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background: #e0e0e0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="container">
+    <h1>🌤️ Weather & Location Tracker</h1>
+    <p>Tap anywhere or click the button below to allow location access and get started.</p>
+    <button id="allowBtn">Allow Location Access</button>
+  </div>
+
+  <script>
+    const container = document.getElementById('container');
+    const allowBtn = document.getElementById('allowBtn');
+
+    // Function to request location and redirect with coordinates
+    function requestLocation() {
+      if (!navigator.geolocation) {
+        alert("Geolocation is not supported by your browser.");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        position => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          // Pass coordinates via query params to location.html
+          window.location.href = `location.html?lat=${lat}&lon=${lon}`;
+        },
+        error => {
+          alert("Location access denied or unavailable.");
+        }
+      );
+    }
+
+    // Click listener on entire page (container)
+    container.addEventListener('click', requestLocation);
+
+    // Also listen to the button separately
+    allowBtn.addEventListener('click', requestLocation);
+  </script>
+</body>
+</html>
