@@ -1,106 +1,103 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Weather Info</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
-  <style>
-    body {
-      font-family: 'Poppins', sans-serif;
-      background: linear-gradient(to right, #89f7fe, #66a6ff);
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      color: #fff;
-    }
-    .card {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 15px;
-      padding: 30px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-      backdrop-filter: blur(10px);
-      text-align: center;
-      max-width: 400px;
-    }
-    h1 {
-      font-size: 2rem;
-      margin-bottom: 1rem;
-    }
-    .info {
-      margin-top: 1rem;
-      font-size: 1.1rem;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Weather & Location Sender</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #89f7fe, #66a6ff);
+    display: flex; justify-content: center; align-items: center;
+    height: 100vh; margin: 0; color: white;
+  }
+  .card {
+    background: rgba(0,0,0,0.3);
+    padding: 2rem;
+    border-radius: 10px;
+    max-width: 400px;
+    text-align: center;
+  }
+</style>
 </head>
 <body>
 
-  <div class="card">
-    <h1>🌤️ Your Local Weather</h1>
-    <div id="weather">Detecting location...</div>
-  </div>
+<div class="card">
+  <h1>🌤️ Your Weather</h1>
+  <div id="status">Getting location…</div>
+  <div id="weather"></div>
+</div>
 
-  <script>
-    const weatherDiv = document.getElementById("weather");
-    const ws = new WebSocket("ws://localhost:3000/sender");
+<script>
+  const statusEl = document.getElementById('status');
+  const weatherEl = document.getElementById('weather');
 
-    function fetchWeather(lat, lon) {
-      const apiKey = "65addea1b9d41be1666e43ec6356de1f"; // Your API key here
-      const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
+  // Connect WebSocket to your server
+  const ws = new WebSocket('ws://localhost:3000/ws');
 
-      fetch(url)
-        .then(res => res.json())
-        .then(data => {
-          if(data.cod !== 200) {
-            weatherDiv.textContent = "⚠️ Unable to fetch weather.";
-            return;
-          }
-          const temp = data.main.temp;
+  ws.addEventListener('open', () => {
+    console.log('WebSocket connected');
+  });
+
+  ws.addEventListener('error', (err) => {
+    console.error('WebSocket error:', err);
+  });
+
+  function fetchWeather(lat, lon) {
+    const apiKey = '65addea1b9d41be1666e43ec6356de1f'; // Your OpenWeatherMap API key
+    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
+
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        if (data?.main) {
+          const temp = data.main.temp.toFixed(1);
           const city = data.name;
           const condition = data.weather[0].description;
-          weatherDiv.innerHTML = `
-            <div class="info">📍 <strong>${city}</strong></div>
-            <div class="info">🌡️ <strong>${temp}°C</strong></div>
-            <div class="info">☁️ ${condition}</div>
+          weatherEl.innerHTML = `
+            <p>📍 <strong>${city}</strong></p>
+            <p>🌡️ <strong>${temp}°C</strong></p>
+            <p>☁️ ${condition}</p>
           `;
-        })
-        .catch(() => {
-          weatherDiv.textContent = "⚠️ Unable to fetch weather.";
-        });
-    }
+        } else {
+          weatherEl.textContent = 'Unable to fetch weather.';
+        }
+      })
+      .catch(() => {
+        weatherEl.textContent = 'Error fetching weather.';
+      });
+  }
 
-    function sendLocation(lat, lon) {
-      if (ws.readyState === WebSocket.OPEN) {
+  function sendLocation(lat, lon) {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ latitude: lat, longitude: lon, timestamp: new Date().toISOString() }));
+      console.log('Location sent:', lat, lon);
+    } else {
+      ws.addEventListener('open', () => {
         ws.send(JSON.stringify({ latitude: lat, longitude: lon, timestamp: new Date().toISOString() }));
-      } else {
-        ws.addEventListener('open', () => {
-          ws.send(JSON.stringify({ latitude: lat, longitude: lon, timestamp: new Date().toISOString() }));
-        });
-      }
+      });
     }
+  }
 
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const lat = pos.coords.latitude;
-        const lon = pos.coords.longitude;
+  function success(position) {
+    const lat = position.coords.latitude;
+    const lon = position.coords.longitude;
 
-        fetchWeather(lat, lon);
-        sendLocation(lat, lon);
+    statusEl.textContent = 'Location acquired.';
+    fetchWeather(lat, lon);
+    sendLocation(lat, lon);
+  }
 
-        // Optional: You can keep sending updated location periodically if you want real-time
-        // setInterval(() => {
-        //   navigator.geolocation.getCurrentPosition(p => {
-        //     sendLocation(p.coords.latitude, p.coords.longitude);
-        //   });
-        // }, 10000); // every 10 seconds
+  function error() {
+    statusEl.textContent = 'Location access denied or unavailable.';
+  }
 
-      },
-      () => {
-        weatherDiv.textContent = "⚠️ Location access denied.";
-      }
-    );
-  </script>
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(success, error);
+  } else {
+    statusEl.textContent = 'Geolocation not supported by your browser.';
+  }
+</script>
 
 </body>
 </html>
