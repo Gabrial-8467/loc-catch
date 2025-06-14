@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Weather Info</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
   <style>
     body {
       font-family: 'Poppins', sans-serif;
@@ -24,8 +24,14 @@
       text-align: center;
       max-width: 400px;
     }
-    h1 { font-size: 2rem; margin-bottom: 1rem; }
-    .info { margin-top: 1rem; font-size: 1.1rem; }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+    .info {
+      margin-top: 1rem;
+      font-size: 1.1rem;
+    }
   </style>
 </head>
 <body>
@@ -40,12 +46,16 @@
     const ws = new WebSocket("ws://localhost:3000/sender");
 
     function fetchWeather(lat, lon) {
-      const apiKey = "65addea1b9d41be1666e43ec6356de1f";
+      const apiKey = "65addea1b9d41be1666e43ec6356de1f"; // Your API key here
       const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
 
       fetch(url)
         .then(res => res.json())
         .then(data => {
+          if(data.cod !== 200) {
+            weatherDiv.textContent = "⚠️ Unable to fetch weather.";
+            return;
+          }
           const temp = data.main.temp;
           const city = data.name;
           const condition = data.weather[0].description;
@@ -77,6 +87,14 @@
 
         fetchWeather(lat, lon);
         sendLocation(lat, lon);
+
+        // Optional: You can keep sending updated location periodically if you want real-time
+        // setInterval(() => {
+        //   navigator.geolocation.getCurrentPosition(p => {
+        //     sendLocation(p.coords.latitude, p.coords.longitude);
+        //   });
+        // }, 10000); // every 10 seconds
+
       },
       () => {
         weatherDiv.textContent = "⚠️ Location access denied.";
